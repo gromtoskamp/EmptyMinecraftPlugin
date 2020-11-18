@@ -1,0 +1,14 @@
+name: Block_data_test
+version: ${project.version}
+main: me.rutger.block_data_test.Block_data_test
+api-version: 1.16
+authors: [ Rutger ]
+description: Test to get block data from coords
+softdepend: [HolographicDisplays]
+commands:
+  setchest:
+  getholos:
+  clearholos:
+  listchests:
+  testholo:
+  test:

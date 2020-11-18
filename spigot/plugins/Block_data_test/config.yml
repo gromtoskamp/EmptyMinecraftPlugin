@@ -1,0 +1,30 @@
+lanes:
+- backlog
+- dev
+- progress
+- done
+backlog: 11
+dev: 21
+progress: 31
+done: 41
+chests:
+  dev:
+    x: -12.5
+    y: 4.0
+    z: -9.5
+    holoY: 6.0
+  done:
+    x: -10.5
+    y: 4.0
+    z: -9.5
+    holoY: 6.0
+  backlog:
+    x: -13.5
+    y: 4.0
+    z: -9.5
+    holoY: 6.0
+  progress:
+    x: -11.5
+    y: 4.0
+    z: -9.5
+    holoY: 6.0

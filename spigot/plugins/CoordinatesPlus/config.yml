@@ -1,0 +1,13 @@
+# CoordinatesPlus by MysticalDestroyr
+# If you enjoy the plugin, please leave a review, and consider checking out some of my other plugins!
+
+# Coordinates displayed to the player:
+# Use %x%, %y%, and %z%
+coordinates: '&f%x% %y% %z%'
+
+# Have the coordinates turned on when a player joins the server for the first time
+show-as-default: true
+
+# Messages when you use /coords
+enabled: '&fCoordinates have been &eenabled'
+disabled: '&fCoordinates have been &edisabled'
