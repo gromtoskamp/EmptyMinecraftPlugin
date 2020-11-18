@@ -5,11 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>me.rutger</groupId>
-    <artifactId>block_data_test</artifactId>
+    <artifactId>jirachest</artifactId>
     <version>0.1</version>
     <packaging>jar</packaging>
 
-    <name>Block_data_test</name>
+    <name>JiraChest</name>
 
     <description>Test to get block data from coords</description>
     <properties>
@@ -50,7 +50,7 @@
                 <version>2.3.1</version>
                 <configuration>
                     <outputDirectory>../Block data test/spigot/plugins</outputDirectory>
-                    <finalName>Block</finalName>
+                    <finalName>JiraChest</finalName>
                 </configuration>
             </plugin>
             <plugin>
@@ -73,7 +73,7 @@
                 <configuration>
                     <script>
                         # Here you can execute shell commands
-                        curl http://localhost:25576/command -H 'X-Anti-CSRF: 1' --data-urlencode 'command=plugman reload Block_data_test'
+                        curl http://localhost:25576/command -H 'X-Anti-CSRF: 1' --data-urlencode 'command=plugman reload JiraChest'
                     </script>
                 </configuration>
             </plugin>

@@ -1,9 +1,9 @@
-name: Block_data_test
+name: JiraChest
 version: ${project.version}
-main: me.rutger.block_data_test.Block_data_test
+main: me.rutger.jirachest.JiraChest
 api-version: 1.16
 authors: [ Rutger ]
-description: Test to get block data from coords
+description: Jiraboard build with chests!
 softdepend: [HolographicDisplays]
 commands:
   setchest:

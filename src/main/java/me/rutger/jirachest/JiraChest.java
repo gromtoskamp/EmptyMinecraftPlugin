@@ -1,5 +1,4 @@
-package me.rutger.block_data_test;
-
+package me.rutger.jirachest;
 
 import com.gmail.filoghost.holographicdisplays.api.Hologram;
 import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
@@ -26,7 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 
 
-public final class Block_data_test extends JavaPlugin implements Listener, TabCompleter {
+public final class JiraChest extends JavaPlugin implements Listener, TabCompleter {
     // Set config(.yml)
     FileConfiguration config = getConfig();
 
@@ -41,8 +40,6 @@ public final class Block_data_test extends JavaPlugin implements Listener, TabCo
 
     @Override
     public void onEnable() {
-        getLogger().info("DEBUG: onEnable");
-
         // Save config.yml
         this.saveDefaultConfig();
 
@@ -64,14 +61,17 @@ public final class Block_data_test extends JavaPlugin implements Listener, TabCo
 
         chestsCfg = new HashMap<String, Block>();
 
-        getLogger().info( "DEBUG chests from config.yml:" + String.valueOf( config.getConfigurationSection("chests").getKeys(false) ));
-
-        // Build chestsCfg map
-        reloadChestCfg();
-        // Clear existing holograms for reloading purposes
-        clearHolos();
-        // Set & display all holograms
-        setHolos();
+        // if no chests are set in config.yml, skip populating chestCfg & triggering holograms
+        if ( config.getConfigurationSection("chests") != null){
+            // Build chestsCfg map
+            reloadChestCfg();
+            // Clear existing holograms for reloading purposes
+            clearHolos();
+            // Set & display all holograms
+            setHolos();
+        } else{
+            Bukkit.broadcastMessage("JiraChest: No chests are set!");
+        }
 
     }
 
@@ -122,7 +122,7 @@ public final class Block_data_test extends JavaPlugin implements Listener, TabCo
     }
 
 
-        // Match event chest to chest in chestCfg
+    // Match event chest to chest in chestCfg
     public boolean matchChest(Block eventBlock){
         Boolean match = false;
         // Iterate through chestCfg map
@@ -275,7 +275,7 @@ public final class Block_data_test extends JavaPlugin implements Listener, TabCo
                         // Return all chests
                         debug("All chests currently set: " + String.valueOf(listChests()));
 
-                    // Else, check if first arg is set as a chest
+                        // Else, check if first arg is set as a chest
                     } else {
                         if (chests.contains(args[0].toLowerCase())) {
 
