@@ -7,7 +7,6 @@ import com.gmail.filoghost.holographicdisplays.api.line.TextLine;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -16,7 +15,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
@@ -35,23 +33,10 @@ public final class Block_data_test extends JavaPlugin implements Listener, TabCo
     // Define some global vars
     public static Plugin plugin;
 
+    // Define world
     public static World world;
 
-    public static Block block_BACKLOG;
-    public static Block block_FORDEV;
-    public static Block block_PROGRESS;
-    public static Block block_DONE;
-
-    public static Location backlogLoc;
-    public static Location fordevLoc;
-    public static Location progressLoc;
-    public static Location doneLoc;
-
-    public static Block backlogChest;
-    public static Block devChest;
-    public static Block progressChest;
-    public static Block doneChest;
-
+    // Define dynamic chest map
     public HashMap chestsCfg;
 
     @Override
@@ -119,13 +104,11 @@ public final class Block_data_test extends JavaPlugin implements Listener, TabCo
     public void leave(InventoryCloseEvent event) {
         Inventory inventory = event.getInventory();
 
-//        debug( String.valueOf( event.getInventory().getStorageContents() ));
-
         // Check if jira chest
         if (matchChest( world.getBlockAt( inventory.getLocation() ))){
 
             // Get chest contents as itemstacks
-            ItemStack[] chestContent = event.getInventory().getStorageContents();
+            ItemStack[] chestContent = inventory.getStorageContents();
             // Iterate through itemstacks & filter on written books
             for (ItemStack stack : chestContent){
                 if (stack != null && stack.getType() == Material.WRITTEN_BOOK){
@@ -266,23 +249,7 @@ public final class Block_data_test extends JavaPlugin implements Listener, TabCo
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         // Set chest as a jira chest
         if (label.equalsIgnoreCase("setchest") && args.length > 0){
-//            switch(args[0].toLowerCase()){
-//                case "backlog":
-//                    setChest("backlog", (Player) sender);
-//                    break;
-//                case "dev":
-//                    setChest("dev", (Player) sender);
-//                    break;
-//                case "progress":
-//                    setChest("progress", (Player) sender);
-//                    break;
-//                case "done":
-//                    setChest("done", (Player) sender);
-//                    break;
-//                default:
-//                    return false;
-//            }
-
+            // Get list of valid args from config -> lanes
             List lanes = (List) config.get("lanes");
             if (lanes.contains(args[0].toLowerCase())){
                 setChest(args[0].toLowerCase(), (Player) sender);
@@ -295,7 +262,6 @@ public final class Block_data_test extends JavaPlugin implements Listener, TabCo
 
         // Quick & dirty command to list all chests
         if (label.equalsIgnoreCase("listchests")){
-//            debug( String.valueOf(listChests()) );
 
             // Get all stored chests from listChests() -> config.yml
             ArrayList<String> chests = new ArrayList<String>(listChests());
