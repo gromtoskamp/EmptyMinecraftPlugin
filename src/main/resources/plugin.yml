@@ -7,8 +7,8 @@ description: Jiraboard build with chests!
 softdepend: [HolographicDisplays]
 commands:
   setchest:
+  setsync:
   getholos:
   clearholos:
   listchests:
-  testholo:
   test:

@@ -1,6 +1,13 @@
-lanes: ["backlog", "dev", "progress", "done"]
-backlog: 11
-dev: 21
-progress: 31
-done: 41
-chests:
+subdomain: "heetmeisje"
+user: "rutger.vvdk@gmail.com"
+key: "umRMH1rGHBz6EYT1ww9x9F19"
+lanes:
+  - backlog
+  - dev
+  - progress
+  - done
+laneIds:
+  backlog: 11
+  dev: 21
+  progress: 31
+  done: 41

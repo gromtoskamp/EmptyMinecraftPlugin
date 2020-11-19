@@ -1,15 +1,29 @@
+subdomain: heetmeisje
+user: rutger.vvdk@gmail.com
+key: umRMH1rGHBz6EYT1ww9x9F19
 lanes:
 - backlog
 - dev
 - progress
 - done
-backlog: 11
-dev: 21
-progress: 31
-done: 41
+laneIds:
+  backlog: 11
+  dev: 21
+  progress: 31
+  done: 41
 chests:
   backlog:
     x: -14.5
     y: 4.0
     z: -9.5
     holoY: 6.0
+  progress:
+    x: -11.5
+    y: 4.0
+    z: -9.5
+    holoY: 6.0
+syncButton:
+  x: -9.5
+  y: 5.0
+  z: -8.5
+  holoY: 6.0

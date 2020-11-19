@@ -4,8 +4,12 @@ import com.gmail.filoghost.holographicdisplays.api.Hologram;
 import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
 import com.gmail.filoghost.holographicdisplays.api.line.TextLine;
 
+import net.md_5.bungee.api.chat.*;
+
+import netscape.javascript.JSObject;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -13,19 +17,21 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.*;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.io.IOException;
+import java.util.*;
 
 
-public final class JiraChest extends JavaPlugin implements Listener, TabCompleter {
+public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
     // Set config(.yml)
     FileConfiguration config = getConfig();
 
@@ -37,6 +43,7 @@ public final class JiraChest extends JavaPlugin implements Listener, TabComplete
 
     // Define dynamic chest map
     public HashMap chestsCfg;
+
 
     @Override
     public void onEnable() {
@@ -121,6 +128,107 @@ public final class JiraChest extends JavaPlugin implements Listener, TabComplete
         }
     }
 
+    @EventHandler
+    public void onPlayerInteract(PlayerInteractEvent event) throws IOException {
+        Player player = event.getPlayer();
+
+        Action action = event.getAction();
+        Block target = event.getClickedBlock();
+
+
+        if (target.getType().toString().contains("BUTTON")){
+            if (action == Action.RIGHT_CLICK_BLOCK){
+                player.sendMessage("LET'S SYNC JIRA!");
+
+                JiraRequest jiraRequest = new JiraRequest();
+
+                // Parse request response to json object
+                JSONObject json = new JSONObject( jiraRequest.getAllIssues() );
+
+                // Iterate over issues
+                json.getJSONArray("issues").forEach( keyStr -> {
+                    // Create JSONObjects from issue
+                    JSONObject issue = new JSONObject(keyStr.toString());
+                    JSONObject fields = issue.getJSONObject("fields");
+                    JSONObject creator = fields.getJSONObject("creator");
+                    JSONObject status = fields.getJSONObject("status");
+
+                    // Get strings from issue json
+                    String key = issue.get("key").toString();
+                    String summary = fields.get("summary").toString();
+                    String description = "";
+                    String title = key + " " + summary;
+
+                    // Trim title after 32 chars, this is a Minecraft limit
+                    title = title.substring(0, Math.min(title.length(), 32));
+
+                    // Filter out "null" from json, this ends up as a string in the json response from Jira for some reason..
+                    if ( fields.get("description").toString().equalsIgnoreCase("NULL") == false ) {
+                        // Set desciption
+                        description = fields.get("description").toString();
+                    }
+
+                    // Define page
+                    ComponentBuilder page = new ComponentBuilder();
+
+                    // Add title to page in Bold
+                    TextComponent bookTitle = new TextComponent(TextComponent.fromLegacyText("§l"+key + " " + summary + "§r"));
+                    page.append(bookTitle);
+
+                    // Define clickable link to Jira page
+                    final TextComponent issuelink = new TextComponent();
+                    final TextComponent link = new TextComponent(TextComponent.fromLegacyText("\n\n » View on Jira\n\n"));
+                    link.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, jiraRequest.getUri("/browse/"+key)));
+                    link.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText("Click to visit Jira!")));
+                    link.setUnderlined(true);
+                    link.setColor( net.md_5.bungee.api.ChatColor.BLUE );
+
+                    issuelink.addExtra(link);
+                    page.append(issuelink);
+
+                    page.create();
+
+                    // Define description
+                    TextComponent bookDescription = new TextComponent(TextComponent.fromLegacyText(description));
+                    page.append(bookDescription);
+
+                    // Build new written book
+                    ItemStack writtenBook = new ItemStack(Material.WRITTEN_BOOK);
+                    BookMeta bookMeta = (BookMeta) writtenBook.getItemMeta();
+
+                    // Add title
+                    bookMeta.setTitle( title );
+
+                    // Add Jira reporter as author
+                    bookMeta.setAuthor( creator.get("displayName").toString() );
+
+                    // Add page to book
+                    bookMeta.spigot().addPage( page.create() );
+
+                    // Finish up book
+                    writtenBook.setItemMeta(bookMeta);
+
+                    debug( status.get("id").toString() );
+
+                    // Give book to player (for now, debug)
+                    player.getInventory().addItem(writtenBook);
+
+                });
+
+            } else {
+                event.setCancelled(true);
+                player.sendMessage("DON'T BREAK THE "+ ChatColor.GOLD + "FUCKING" + ChatColor.RESET + " BUTTON!");
+            }
+        } else if (target.getType() == Material.CHEST && matchChest( world.getBlockAt( target.getLocation() ))) {
+            if (action == Action.LEFT_CLICK_BLOCK){
+                event.setCancelled(true);
+                player.sendMessage("DON'T BREAK THE "+ ChatColor.GOLD + "FUCKING" + ChatColor.RESET + " CHEST!");
+            }
+
+        }
+
+    }
+
 
     // Match event chest to chest in chestCfg
     public boolean matchChest(Block eventBlock){
@@ -175,6 +283,22 @@ public final class JiraChest extends JavaPlugin implements Listener, TabComplete
             Hologram hologram = HologramsAPI.createHologram(plugin, holoLoc);
             TextLine textLine = hologram.appendTextLine(c.toString().toUpperCase());
         }
+
+        Bukkit.broadcastMessage(String.valueOf(config.contains("syncButton")));
+
+        if (config.contains("syncButton") == true){
+            // Set hologram for sync button
+            Double X = (Double) config.get("syncButton.x");
+            Double Y = (Double) config.get("syncButton.holoY");
+            Double Z = (Double) config.get("syncButton.z");
+
+            Location syncButton = new Location( world, (Double)X, (Double)Y, (Double)Z );
+
+            Hologram hologram = HologramsAPI.createHologram(plugin, syncButton);
+            TextLine textLine = hologram.appendTextLine("Sync Jira");
+        }
+
+
     }
 
     // Function to set a chest as a jira lane
@@ -216,6 +340,50 @@ public final class JiraChest extends JavaPlugin implements Listener, TabComplete
         }
     }
 
+    public void setSync(Player player){
+        Block target = player.getTargetBlockExact(16);
+        Location syncButton = null;
+        // Check if block player is looking at is a button
+        if (target.getType().toString().contains("BUTTON")){
+            syncButton = target.getLocation();
+        } else {
+            // Check if any of the attached blocks is a button
+            if( target.getRelative(BlockFace.NORTH).toString().contains("BUTTON")) syncButton = target.getRelative(BlockFace.NORTH).getLocation();
+            if( target.getRelative(BlockFace.SOUTH).toString().contains("BUTTON")) syncButton = target.getRelative(BlockFace.SOUTH).getLocation();
+            if( target.getRelative(BlockFace.EAST).toString().contains("BUTTON")) syncButton = target.getRelative(BlockFace.EAST).getLocation();
+            if( target.getRelative(BlockFace.WEST).toString().contains("BUTTON")) syncButton = target.getRelative(BlockFace.WEST).getLocation();
+            if( target.getRelative(BlockFace.UP).toString().contains("BUTTON")) syncButton = target.getRelative(BlockFace.UP).getLocation();
+            if( target.getRelative(BlockFace.DOWN).toString().contains("BUTTON")) syncButton = target.getRelative(BlockFace.DOWN).getLocation();
+        }
+
+        if (syncButton != null){
+            // Center sync button location and save location to config.yml
+            Double X = syncButton.getX() + 0.5;
+            Double Y = syncButton.getY();
+            Double Z = syncButton.getZ() + 0.5;
+
+            config.set("syncButton.x", X);
+            config.set("syncButton.y", Y);
+            config.set("syncButton.z", Z);
+
+            // Generate & save holo
+            double holoY = target.getLocation().getY() + 1;
+            config.set("syncButton.holoY", holoY );
+            // Save config file
+            saveConfig();
+
+            // Update chestsCfg
+            reloadChestCfg();
+            // Clear holograms
+            clearHolos();
+            // Display holograms with updated values
+            setHolos();
+        } else {
+            player.sendMessage("Couldn't find a button..");
+        }
+
+    }
+
     // Return List of set chests
     public List<String> listChests(){
         if (getConfig().contains( "chests")) {
@@ -227,6 +395,7 @@ public final class JiraChest extends JavaPlugin implements Listener, TabComplete
 
     //Tab completer for commands
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        // Autocomplete for "setchest"
         if (command.getName().equalsIgnoreCase("setchest") && args.length == 1) {
             if (sender instanceof Player) {
                 // Get all available lanes from config.yml
@@ -234,9 +403,10 @@ public final class JiraChest extends JavaPlugin implements Listener, TabComplete
                 return lanes;
             }
         }
+        // autocomplete for listchests
         if (command.getName().equalsIgnoreCase("listchests") && args.length == 1) {
             if (sender instanceof Player) {
-                // Get all stored chests
+                // Get all stored chests so only stored chests will be shown
                 ArrayList<String> chests = new ArrayList<String>(listChests());
                 // Add "all"
                 chests.add("all");
@@ -247,8 +417,9 @@ public final class JiraChest extends JavaPlugin implements Listener, TabComplete
     }
 
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        // Set chest as a jira chest
-        if (label.equalsIgnoreCase("setchest") && args.length > 0){
+
+        // Set chest as a jira chest (check if sender is a player)
+        if (label.equalsIgnoreCase("setchest") && args.length > 0 && sender instanceof Player){
             // Get list of valid args from config -> lanes
             List lanes = (List) config.get("lanes");
             if (lanes.contains(args[0].toLowerCase())){
@@ -258,6 +429,11 @@ public final class JiraChest extends JavaPlugin implements Listener, TabComplete
                 return false;
             }
 
+        }
+
+        // Set a button to sync with Jira (check if sender is a player)
+        if (label.equalsIgnoreCase("setsync") && sender instanceof Player) {
+            setSync((Player) sender);
         }
 
         // Quick & dirty command to list all chests
@@ -317,21 +493,34 @@ public final class JiraChest extends JavaPlugin implements Listener, TabComplete
             }
         }
 
-        // DEBUG: test function to set a holo
-        if (label.equalsIgnoreCase("testholo")){
-            Player player = (Player) sender;
-
-            Location location = player.getLocation();
-
-            location.setY(6);
-
-            Hologram hologram = HologramsAPI.createHologram(plugin, location);
-
-            TextLine textLine = hologram.appendTextLine("TEST");
-        }
         // DEBUG: general testing function
         if (label.equalsIgnoreCase("test")){
-            debug("test?");
+
+            JiraRequest jiraRequest = new JiraRequest();
+
+            try {
+                // Get specific issue json
+                debug( jiraRequest.getIssue("HEET-1") );
+
+                // Get all open issues json
+//                debug( jiraRequest.getAllIssues());
+
+                // Transition issue to another lane
+                // Get lanes - id's from config
+//                HashMap<String, String> laneIds = new HashMap<String, String>();
+//                for (String lane : config.getConfigurationSection("laneIds").getKeys(false)){
+//                    String laneID = config.get("laneIds."+lane).toString();
+//                    laneIds.put(lane, laneID );
+//                }
+//                debug( jiraRequest.transition("HEET-1", laneIds.get("backlog")));
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+
+
         }
         return true;
     }
