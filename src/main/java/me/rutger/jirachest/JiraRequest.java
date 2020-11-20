@@ -46,6 +46,11 @@ public class JiraRequest {
         return postRequest(endpoint,json);
     }
 
+    public String getTransitions(String issue) throws IOException {
+        String uri = getUri(String.format(ENDPOINT_TRANSITIONS_FORMAT, issue));
+        return getRequest(uri);
+    }
+
     // General get method
     public String getRequest(String endpoint) throws IOException {
 

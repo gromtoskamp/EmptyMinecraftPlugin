@@ -6,10 +6,10 @@ import com.gmail.filoghost.holographicdisplays.api.line.TextLine;
 
 import net.md_5.bungee.api.chat.*;
 
-import netscape.javascript.JSObject;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -25,12 +25,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.block.Chest;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.*;
 
-
+//todo jira reload command
 public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
     // Set config(.yml)
     FileConfiguration config = getConfig();
@@ -69,17 +70,17 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
         chestsCfg = new HashMap<String, Block>();
 
         // if no chests are set in config.yml, skip populating chestCfg & triggering holograms
-        if ( config.getConfigurationSection("chests") != null){
-            // Build chestsCfg map
-            reloadChestCfg();
-            // Clear existing holograms for reloading purposes
-            clearHolos();
-            // Set & display all holograms
-            setHolos();
-        } else{
+        if (config.getConfigurationSection("chests") == null) {
             Bukkit.broadcastMessage("JiraChest: No chests are set!");
+            return;
         }
 
+        // Build chestsCfg map
+        reloadChestCfg();
+        // Clear existing holograms for reloading purposes
+        clearHolos();
+        // Set & display all holograms
+        setHolos();
     }
 
     @Override
@@ -112,18 +113,19 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
         Inventory inventory = event.getInventory();
 
         // Check if jira chest
-        if (matchChest( world.getBlockAt( inventory.getLocation() ))){
+        if (!matchChest( world.getBlockAt( inventory.getLocation() ))){
+            return;
+        }
 
-            // Get chest contents as itemstacks
-            ItemStack[] chestContent = inventory.getStorageContents();
-            // Iterate through itemstacks & filter on written books
-            for (ItemStack stack : chestContent){
-                if (stack != null && stack.getType() == Material.WRITTEN_BOOK){
-                    // Get bookmeta
-                    BookMeta issue = (BookMeta) stack.getItemMeta();
-                    // Get title
-                    debug( String.valueOf( issue.getTitle() ) );
-                }
+        // Get chest contents as itemstacks
+        ItemStack[] chestContent = inventory.getStorageContents();
+        // Iterate through itemstacks & filter on written books
+        for (ItemStack stack : chestContent){
+            if (stack != null && stack.getType() == Material.WRITTEN_BOOK){
+                // Get bookmeta
+                BookMeta issue = (BookMeta) stack.getItemMeta();
+                // Get title
+                debug( String.valueOf( issue.getTitle() ) );
             }
         }
     }
@@ -137,116 +139,174 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
 
 
         if (target.getType().toString().contains("BUTTON")){
-            if (action == Action.RIGHT_CLICK_BLOCK){
-                player.sendMessage("LET'S SYNC JIRA!");
-
-                JiraRequest jiraRequest = new JiraRequest();
-
-                // Parse request response to json object
-                JSONObject json = new JSONObject( jiraRequest.getAllIssues() );
-
-                // Iterate over issues
-                json.getJSONArray("issues").forEach( keyStr -> {
-                    // Create JSONObjects from issue
-                    JSONObject issue = new JSONObject(keyStr.toString());
-                    JSONObject fields = issue.getJSONObject("fields");
-                    JSONObject creator = fields.getJSONObject("creator");
-                    JSONObject status = fields.getJSONObject("status");
-
-                    // Get strings from issue json
-                    String key = issue.get("key").toString();
-                    String summary = fields.get("summary").toString();
-                    String description = "";
-                    String title = key + " " + summary;
-
-                    // Trim title after 32 chars, this is a Minecraft limit
-                    title = title.substring(0, Math.min(title.length(), 32));
-
-                    // Filter out "null" from json, this ends up as a string in the json response from Jira for some reason..
-                    if ( fields.get("description").toString().equalsIgnoreCase("NULL") == false ) {
-                        // Set desciption
-                        description = fields.get("description").toString();
-                    }
-
-                    // Define page
-                    ComponentBuilder page = new ComponentBuilder();
-
-                    // Add title to page in Bold
-                    TextComponent bookTitle = new TextComponent(TextComponent.fromLegacyText("§l"+key + " " + summary + "§r"));
-                    page.append(bookTitle);
-
-                    // Define clickable link to Jira page
-                    final TextComponent issuelink = new TextComponent();
-                    final TextComponent link = new TextComponent(TextComponent.fromLegacyText("\n\n » View on Jira\n\n"));
-                    link.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, jiraRequest.getUri("/browse/"+key)));
-                    link.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText("Click to visit Jira!")));
-                    link.setUnderlined(true);
-                    link.setColor( net.md_5.bungee.api.ChatColor.BLUE );
-
-                    issuelink.addExtra(link);
-                    page.append(issuelink);
-
-                    page.create();
-
-                    // Define description
-                    TextComponent bookDescription = new TextComponent(TextComponent.fromLegacyText(description));
-                    page.append(bookDescription);
-
-                    // Build new written book
-                    ItemStack writtenBook = new ItemStack(Material.WRITTEN_BOOK);
-                    BookMeta bookMeta = (BookMeta) writtenBook.getItemMeta();
-
-                    // Add title
-                    bookMeta.setTitle( title );
-
-                    // Add Jira reporter as author
-                    bookMeta.setAuthor( creator.get("displayName").toString() );
-
-                    // Add page to book
-                    bookMeta.spigot().addPage( page.create() );
-
-                    // Finish up book
-                    writtenBook.setItemMeta(bookMeta);
-
-                    debug( status.get("id").toString() );
-
-                    // Give book to player (for now, debug)
-                    player.getInventory().addItem(writtenBook);
-
-                });
-
-            } else {
+            if (action != Action.RIGHT_CLICK_BLOCK){
                 event.setCancelled(true);
                 player.sendMessage("DON'T BREAK THE "+ ChatColor.GOLD + "FUCKING" + ChatColor.RESET + " BUTTON!");
             }
-        } else if (target.getType() == Material.CHEST && matchChest( world.getBlockAt( target.getLocation() ))) {
+
+            syncJira(player);
+        }
+        if (target.getType() == Material.CHEST && matchChest( world.getBlockAt( target.getLocation() ))) {
             if (action == Action.LEFT_CLICK_BLOCK){
                 event.setCancelled(true);
                 player.sendMessage("DON'T BREAK THE "+ ChatColor.GOLD + "FUCKING" + ChatColor.RESET + " CHEST!");
             }
-
         }
-
     }
 
+    private void syncJira(Player player) throws IOException {
+        player.sendMessage("LET'S SYNC JIRA!");
+
+        emptyChests();
+
+        JiraRequest jiraRequest = new JiraRequest();
+
+        // Parse request response to json object
+        JSONObject json = new JSONObject( jiraRequest.getAllIssues() );
+
+        // Iterate over issues
+        json.getJSONArray("issues").forEach( keyStr -> {
+            syncIssue(player, jiraRequest, keyStr);
+        });
+    }
+
+    private void syncIssue(Player player, JiraRequest jiraRequest, Object keyStr) {
+
+        // Create JSONObjects from issue
+        JSONObject issue = new JSONObject(keyStr.toString());
+        JSONObject fields = issue.getJSONObject("fields");
+        JSONObject creator = fields.getJSONObject("creator");
+        JSONObject status = fields.getJSONObject("status");
+
+        // Get strings from issue json
+        String key = issue.get("key").toString();
+        String summary = fields.get("summary").toString();
+        String description = "";
+        String title = key + " " + summary;
+
+        // Trim title after 32 chars, this is a Minecraft limit
+        title = title.substring(0, Math.min(title.length(), 32));
+
+        // Filter out "null" from json, this ends up as a string in the json response from Jira for some reason..
+        if ( fields.get("description").toString().equalsIgnoreCase("NULL") == false ) {
+            // Set desciption
+            description = fields.get("description").toString();
+        }
+
+        // Define page
+        ComponentBuilder page = new ComponentBuilder();
+
+        // Add title to page in Bold
+        TextComponent bookTitle = new TextComponent(TextComponent.fromLegacyText("§l"+key + " " + summary + "§r"));
+        page.append(bookTitle);
+
+        // Define clickable link to Jira page
+        final TextComponent issuelink = new TextComponent();
+        final TextComponent link = new TextComponent(TextComponent.fromLegacyText("\n\n » View on Jira\n\n"));
+        link.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, jiraRequest.getUri("/browse/"+key)));
+        link.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText("Click to visit Jira!")));
+        link.setUnderlined(true);
+        link.setColor( net.md_5.bungee.api.ChatColor.BLUE );
+
+        issuelink.addExtra(link);
+        page.append(issuelink);
+
+        page.create();
+
+        // Define description
+        TextComponent bookDescription = new TextComponent(TextComponent.fromLegacyText(description));
+        page.append(bookDescription);
+
+        // Build new written book
+        ItemStack writtenBook = new ItemStack(Material.WRITTEN_BOOK);
+        BookMeta bookMeta = (BookMeta) writtenBook.getItemMeta();
+
+        // Add title
+        bookMeta.setTitle( title );
+
+        // Add Jira reporter as author
+        bookMeta.setAuthor( creator.get("displayName").toString() );
+
+        // Add page to book
+        bookMeta.spigot().addPage( page.create() );
+
+        // Finish up book
+        writtenBook.setItemMeta(bookMeta);
+
+
+        //todo: find chest to match with lane
+        String lane = getLane(status.get("id").toString());
+        putInChest(writtenBook, lane);
+
+        debug(lane);
+    }
+
+    private String getLane(String statusId) {
+        // Get all available lanes from config.yml
+        List lanes = getLanes();
+        // Add lane > location to map if stored in config.yml
+        for (Object lane: lanes) {
+            String laneKey = String.valueOf(lane);
+            String laneId = config.get("laneIds."+laneKey+".id").toString();
+
+            if (laneId.equalsIgnoreCase(statusId)) {
+                return laneKey;
+            }
+        }
+
+        return "";
+    }
+
+    public void putInChest(ItemStack book, String lane) {
+        Location chestLocation;
+        try {
+            chestLocation = getChestLocation(lane);
+        } catch (RuntimeException e) {
+            debug(e.getMessage());
+            return;
+        }
+
+        Chest chest = (Chest) chestLocation.getBlock().getState();
+        chest.getInventory().addItem(book);
+    }
+
+    public void emptyChests() {
+        for (Object lane : getLanes()) {
+            Location chestLocation = getChestLocation(lane.toString());
+            Chest chest = (Chest) chestLocation.getBlock().getState();
+
+            chest.getInventory().clear();
+        }
+    }
+
+    public Location getChestLocation(String lane) {
+        for (Object location : chestsCfg.keySet()) {
+            if (location.toString().equalsIgnoreCase(lane)) {
+                Location holoLocation = (Location) chestsCfg.get(lane);
+                return new Location(world, holoLocation.getX(), holoLocation.getY()-2, holoLocation.getZ());
+            }
+        }
+
+        throw new RuntimeException("Chest " + lane + " not found");
+    }
 
     // Match event chest to chest in chestCfg
     public boolean matchChest(Block eventBlock){
-        Boolean match = false;
         // Iterate through chestCfg map
         for (Object c : chestsCfg.values()){
             // Compare eventBlock against chests from chestCfg
             if (world.getBlockAt( (Location)c ).getRelative(0, -2, 0).equals(eventBlock)){
-                match = true;
+                return true;
             }
         }
-        return match;
+
+        return false;
     }
 
     // Build chestCfg map
     public void reloadChestCfg(){
         // Get all available lanes from config.yml
-        List lanes = (List) config.get("lanes");
+        List<Object> lanes = getLanes();
         // Add lane > location to map if stored in config.yml
         for (Object lane: lanes) {
             String laneKey = String.valueOf(lane);
@@ -261,6 +321,10 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
                 chestsCfg.put(laneKey, loc);
             }
         }
+    }
+
+    private List<Object> getLanes() {
+        return (List) config.get("lanes");
     }
 
     public void clearHolos(){
@@ -399,7 +463,7 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
         if (command.getName().equalsIgnoreCase("setchest") && args.length == 1) {
             if (sender instanceof Player) {
                 // Get all available lanes from config.yml
-                List lanes = (List) config.get("lanes");
+                List lanes = getLanes();
                 return lanes;
             }
         }
@@ -421,7 +485,7 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
         // Set chest as a jira chest (check if sender is a player)
         if (label.equalsIgnoreCase("setchest") && args.length > 0 && sender instanceof Player){
             // Get list of valid args from config -> lanes
-            List lanes = (List) config.get("lanes");
+            List lanes = getLanes();
             if (lanes.contains(args[0].toLowerCase())){
                 setChest(args[0].toLowerCase(), (Player) sender);
                 return true;
@@ -501,6 +565,7 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
             try {
                 // Get specific issue json
                 debug( jiraRequest.getIssue("HEET-1") );
+                debug (jiraRequest.getTransitions("HEET-1"));
 
                 // Get all open issues json
 //                debug( jiraRequest.getAllIssues());
