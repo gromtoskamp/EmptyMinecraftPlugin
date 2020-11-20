@@ -49,7 +49,7 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>2.3.1</version>
                 <configuration>
-                    <outputDirectory>../Block data test/spigot/plugins</outputDirectory>
+                    <outputDirectory>../jirachest/spigot/plugins</outputDirectory>
                     <finalName>JiraChest</finalName>
                 </configuration>
             </plugin>
@@ -108,16 +108,6 @@
             <groupId>com.gmail.filoghost.holographicdisplays</groupId>
             <artifactId>holographicdisplays-api</artifactId>
             <version>2.4.5</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore</artifactId>
-            <version>4.3.3</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.3.6</version>
         </dependency>
         <dependency>
             <groupId>org.json</groupId>

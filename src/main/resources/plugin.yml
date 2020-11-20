@@ -11,4 +11,5 @@ commands:
   getholos:
   clearholos:
   listchests:
+  clearchests:
   test:

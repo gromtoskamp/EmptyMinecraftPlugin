@@ -9,7 +9,6 @@ import net.md_5.bungee.api.chat.*;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -30,6 +29,8 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 //todo jira reload command
 public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
@@ -109,7 +110,7 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
     }
 
     @EventHandler
-    public void leave(InventoryCloseEvent event) {
+    public void leave(InventoryCloseEvent event) throws IOException {
         Inventory inventory = event.getInventory();
 
         // Check if jira chest
@@ -126,6 +127,23 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
                 BookMeta issue = (BookMeta) stack.getItemMeta();
                 // Get title
                 debug( String.valueOf( issue.getTitle() ) );
+
+                String regex = "(^HEET-\\d+)";
+
+                Pattern pattern = Pattern.compile(regex);
+                Matcher match = pattern.matcher( issue.getTitle() );
+
+                if (match.find( )) {
+                    debug("KEY: " + match.group(0) );
+
+                    String key = match.group(0);
+                    String transition = matchChestLookup( world.getBlockAt( inventory.getLocation() ) ).toString();
+
+                    JiraRequest jiraRequest = new JiraRequest();
+
+                    jiraRequest.transition(key, transition);
+                }
+
             }
         }
     }
@@ -153,6 +171,7 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
             }
         }
     }
+
 
     private void syncJira(Player player) throws IOException {
         player.sendMessage("LET'S SYNC JIRA!");
@@ -233,12 +252,12 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
         // Finish up book
         writtenBook.setItemMeta(bookMeta);
 
-
-        //todo: find chest to match with lane
         String lane = getLane(status.get("id").toString());
+        // Put book in correct chest
         putInChest(writtenBook, lane);
 
-        debug(lane);
+        // DEBUG: output lane
+//        debug(lane);
     }
 
     private String getLane(String statusId) {
@@ -257,6 +276,7 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
         return "";
     }
 
+    // Put book in correct chest, according to lane
     public void putInChest(ItemStack book, String lane) {
         Location chestLocation;
         try {
@@ -270,6 +290,7 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
         chest.getInventory().addItem(book);
     }
 
+    // Clear jira chests
     public void emptyChests() {
         for (Object lane : getLanes()) {
             Location chestLocation = getChestLocation(lane.toString());
@@ -301,6 +322,21 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
         }
 
         return false;
+    }
+
+    // Lookup event chest in chestCfg
+    public Object matchChestLookup(Block eventBlock){
+        // Iterate through chestCfg map
+        for (Object key : chestsCfg.keySet()) {
+
+            if (world.getBlockAt( (Location) chestsCfg.get(key) ).getRelative(0, -2, 0).equals(eventBlock)){
+//                debug( key.toString() );
+//                debug( config.get("laneIds."+key+".transition").toString() );
+                return config.get("laneIds."+key+".transition").toString();
+            }
+        }
+
+        return null;
     }
 
     // Build chestCfg map
@@ -347,8 +383,6 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
             Hologram hologram = HologramsAPI.createHologram(plugin, holoLoc);
             TextLine textLine = hologram.appendTextLine(c.toString().toUpperCase());
         }
-
-        Bukkit.broadcastMessage(String.valueOf(config.contains("syncButton")));
 
         if (config.contains("syncButton") == true){
             // Set hologram for sync button
@@ -543,6 +577,10 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
                 debug("No chests are set!");
             }
 
+        }
+
+        if (label.equalsIgnoreCase("clearchests")){
+            emptyChests();
         }
 
         // List all set holograms to player
