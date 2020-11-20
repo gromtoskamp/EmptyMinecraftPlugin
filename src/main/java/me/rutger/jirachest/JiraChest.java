@@ -155,8 +155,9 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
         Action action = event.getAction();
         Block target = event.getClickedBlock();
 
+        // If clicked block is a button and matches set syncbutton
+        if (target.getType().toString().contains("BUTTON") && getSyncButtonLoc(target.getLocation())){
 
-        if (target.getType().toString().contains("BUTTON")){
             if (action != Action.RIGHT_CLICK_BLOCK){
                 event.setCancelled(true);
                 player.sendMessage("DON'T BREAK THE "+ ChatColor.GOLD + "FUCKING" + ChatColor.RESET + " BUTTON!");
@@ -170,6 +171,22 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
                 player.sendMessage("DON'T BREAK THE "+ ChatColor.GOLD + "FUCKING" + ChatColor.RESET + " CHEST!");
             }
         }
+    }
+
+    private boolean getSyncButtonLoc(Location target){
+        // If syncbutton isn't set, return false
+        if (!config.getKeys(false).contains("syncButton")) return false;
+
+        // Get sync button location
+        Double X = (Double) config.get("syncButton.x") - 0.5;
+        Double Y = (Double) config.get("syncButton.y");
+        Double Z = (Double) config.get("syncButton.z") - 0.5;
+
+        Location loc = new Location( world, (Double)X, (Double)Y, (Double)Z );
+        // Compare syncbutton location against target block location
+        if (target.equals(loc)) return true;
+
+        return false;
     }
 
 
