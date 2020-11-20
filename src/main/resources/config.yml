@@ -7,7 +7,19 @@ lanes:
   - progress
   - done
 laneIds:
-  backlog: 11
-  dev: 21
-  progress: 31
-  done: 41
+  backlog:
+    name: Backlog
+    transition: 11
+    id: 10000
+  dev:
+    name: "Selected for Development"
+    transition: 21
+    id: 10001
+  progress:
+    name: "In Progress"
+    transition: 31
+    id: 4
+  done:
+    name: Done
+    transition: 41
+    id: 3
