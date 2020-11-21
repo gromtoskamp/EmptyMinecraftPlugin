@@ -18,8 +18,8 @@ laneIds:
   progress:
     name: "In Progress"
     transition: 31
-    id: 4
+    id: 3
   done:
     name: Done
     transition: 41
-    id: 3
+    id: 10002
