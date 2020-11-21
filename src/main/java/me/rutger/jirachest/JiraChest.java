@@ -110,42 +110,78 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
     }
 
     @EventHandler
-    public void leave(InventoryCloseEvent event) throws IOException {
+    public void open(InventoryOpenEvent event) {
         Inventory inventory = event.getInventory();
+        Block block = inventory.getLocation().getBlock();
+        Object lane = getLaneFromBlock(block);
 
         // Check if jira chest
-        if (!matchChest( world.getBlockAt( inventory.getLocation() ))){
-            return;
+        if (isJiraChest(inventory)) return;
+
+        ItemStack[] chestContent = inventory.getStorageContents();
+        for (ItemStack stack : chestContent) {
+            if (!isBook(stack)) continue;
+
+            BookMeta bookMeta = (BookMeta) stack.getItemMeta();
+            if (null == bookMeta) continue;
+
+            String issueKey = getIssueKey(bookMeta);
+            debug(issueKey);
+            config.set(issueKey, lane.toString());
         }
+    }
+
+    @EventHandler
+    public void leave(InventoryCloseEvent event) throws IOException {
+        Inventory inventory = event.getInventory();
+        if (isJiraChest(inventory)) return;
+
+        Object lane = getLaneFromBlock(inventory.getLocation().getBlock());
 
         // Get chest contents as itemstacks
         ItemStack[] chestContent = inventory.getStorageContents();
         // Iterate through itemstacks & filter on written books
         for (ItemStack stack : chestContent){
-            if (stack != null && stack.getType() == Material.WRITTEN_BOOK){
-                // Get bookmeta
-                BookMeta issue = (BookMeta) stack.getItemMeta();
-                // Get title
-                debug( String.valueOf( issue.getTitle() ) );
+            if (!isBook(stack)) continue;
 
-                String regex = "(^HEET-\\d+)";
+            // Get bookmeta
+            BookMeta issue = (BookMeta) stack.getItemMeta();
+            String issueKey = getIssueKey(issue);
+            if (issueKey.equals("")) continue;
 
-                Pattern pattern = Pattern.compile(regex);
-                Matcher match = pattern.matcher( issue.getTitle() );
+            debug("KEY: " + issueKey );
 
-                if (match.find( )) {
-                    debug("KEY: " + match.group(0) );
+            Object configLane = config.get(issueKey);
+            if (configLane.toString().equals(lane.toString())) continue;
 
-                    String key = match.group(0);
-                    String transition = matchChestLookup( world.getBlockAt( inventory.getLocation() ) ).toString();
+            debug("Updating: " + issueKey);
 
-                    JiraRequest jiraRequest = new JiraRequest();
+            String transition = getTransition( inventory.getLocation().getBlock() ).toString();
 
-                    jiraRequest.transition(key, transition);
-                }
-
-            }
+            JiraRequest jiraRequest = new JiraRequest();
+            jiraRequest.transition(issueKey, transition);
         }
+    }
+
+    private boolean isBook(ItemStack stack) {
+        return stack != null && stack.getType() == Material.WRITTEN_BOOK;
+    }
+
+    private String getIssueKey(BookMeta issue) {
+        String regex = "(^HEET-\\d+)";
+
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(issue.getTitle());
+        if (!matcher.find()) {
+            return "";
+        }
+
+        return matcher.group(0);
+    }
+
+    private boolean isJiraChest(Inventory inventory) {
+        // Check if jira chest
+        return !matchChest(world.getBlockAt(inventory.getLocation()));
     }
 
     @EventHandler
@@ -342,17 +378,22 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
     }
 
     // Lookup event chest in chestCfg
-    public Object matchChestLookup(Block eventBlock){
-        // Iterate through chestCfg map
-        for (Object key : chestsCfg.keySet()) {
+    public Object getTransition(Block eventBlock){
 
-            if (world.getBlockAt( (Location) chestsCfg.get(key) ).getRelative(0, -2, 0).equals(eventBlock)){
-//                debug( key.toString() );
-//                debug( config.get("laneIds."+key+".transition").toString() );
-                return config.get("laneIds."+key+".transition").toString();
-            }
+        Object key = getLaneFromBlock(eventBlock);
+        if (null == key) {
+            return null;
         }
 
+        return config.get("laneIds."+key+".transition").toString();
+    }
+
+    private Object getLaneFromBlock(Block block) {
+        for (Object key : chestsCfg.keySet()) {
+            if (world.getBlockAt((Location) chestsCfg.get(key)).getRelative(0, -2, 0).equals(block)) {
+                return key;
+            }
+        }
         return null;
     }
 
