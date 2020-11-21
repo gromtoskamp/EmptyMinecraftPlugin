@@ -126,7 +126,6 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
             if (null == bookMeta) continue;
 
             String issueKey = getIssueKey(bookMeta);
-            debug(issueKey);
             config.set(issueKey, lane.toString());
         }
     }
@@ -148,8 +147,6 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
             BookMeta issue = (BookMeta) stack.getItemMeta();
             String issueKey = getIssueKey(issue);
             if (issueKey.equals("")) continue;
-
-            debug("KEY: " + issueKey );
 
             Object configLane = config.get(issueKey);
             if (configLane.toString().equals(lane.toString())) continue;
