@@ -46,6 +46,8 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
     // Define dynamic chest map
     public HashMap chestsCfg;
 
+    private IssueFactory issueFactory;
+
 
     @Override
     public void onEnable() {
@@ -69,6 +71,7 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
         world = Bukkit.getWorlds().get(0);
 
         chestsCfg = new HashMap<String, Block>();
+        issueFactory = new IssueFactory();
 
         // if no chests are set in config.yml, skip populating chestCfg & triggering holograms
         if (config.getConfigurationSection("chests") == null) {
@@ -241,70 +244,29 @@ public class JiraChest extends JavaPlugin implements Listener, TabCompleter {
 
     private void syncIssue(Player player, JiraRequest jiraRequest, Object keyStr) {
 
-        // Create JSONObjects from issue
-        JSONObject issue = new JSONObject(keyStr.toString());
-        JSONObject fields = issue.getJSONObject("fields");
+        // Create JSONObjects from issueJson
+        JSONObject issueJson = new JSONObject(keyStr.toString());
+        JSONObject fields = issueJson.getJSONObject("fields");
         JSONObject creator = fields.getJSONObject("creator");
         JSONObject status = fields.getJSONObject("status");
 
-        // Get strings from issue json
-        String key = issue.get("key").toString();
+        // Get strings from issueJson json
+        String key = issueJson.get("key").toString();
         String summary = fields.get("summary").toString();
         String description = "";
-        String title = key + " " + summary;
-
-        // Trim title after 32 chars, this is a Minecraft limit
-        title = title.substring(0, Math.min(title.length(), 32));
-
         // Filter out "null" from json, this ends up as a string in the json response from Jira for some reason..
         if ( fields.get("description").toString().equalsIgnoreCase("NULL") == false ) {
             // Set desciption
             description = fields.get("description").toString();
         }
 
-        // Define page
-        ComponentBuilder page = new ComponentBuilder();
+        String author = creator.get("displayName").toString();
 
-        // Add title to page in Bold
-        TextComponent bookTitle = new TextComponent(TextComponent.fromLegacyText("§l"+key + " " + summary + "§r"));
-        page.append(bookTitle);
-
-        // Define clickable link to Jira page
-        final TextComponent issuelink = new TextComponent();
-        final TextComponent link = new TextComponent(TextComponent.fromLegacyText("\n\n » View on Jira\n\n"));
-        link.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, jiraRequest.getUri("/browse/"+key)));
-        link.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText("Click to visit Jira!")));
-        link.setUnderlined(true);
-        link.setColor( net.md_5.bungee.api.ChatColor.BLUE );
-
-        issuelink.addExtra(link);
-        page.append(issuelink);
-
-        page.create();
-
-        // Define description
-        TextComponent bookDescription = new TextComponent(TextComponent.fromLegacyText(description));
-        page.append(bookDescription);
-
-        // Build new written book
-        ItemStack writtenBook = new ItemStack(Material.WRITTEN_BOOK);
-        BookMeta bookMeta = (BookMeta) writtenBook.getItemMeta();
-
-        // Add title
-        bookMeta.setTitle( title );
-
-        // Add Jira reporter as author
-        bookMeta.setAuthor( creator.get("displayName").toString() );
-
-        // Add page to book
-        bookMeta.spigot().addPage( page.create() );
-
-        // Finish up book
-        writtenBook.setItemMeta(bookMeta);
+        ItemStack issue = issueFactory.createIssue(key, summary, description, author);
 
         String lane = getLane(status.get("id").toString());
         // Put book in correct chest
-        putInChest(writtenBook, lane);
+        putInChest(issue, lane);
 
         // DEBUG: output lane
 //        debug(lane);
