@@ -1,6 +1,6 @@
-name: NetherKippen
+name: EmptyMinecraftPlugin
 version: ${project.version}
-main: me.heetmeisje.netherkippen.NetherKippen
+main: emtpyminecraftplugin.EmptyMinecraftPlugin
 api-version: 1.16
-authors: [ Heetmeisje ]
-description: NetherKippen, need i say more?
+authors: [ GromToskamp ]
+description: EmptyMinecraftPlugin
