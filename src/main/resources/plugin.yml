@@ -1,15 +1,6 @@
-name: JiraChest
+name: NetherKippen
 version: ${project.version}
-main: me.rutger.jirachest.JiraChest
+main: me.heetmeisje.netherkippen.NetherKippen
 api-version: 1.16
-authors: [ Rutger ]
-description: Jiraboard build with chests!
-softdepend: [HolographicDisplays]
-commands:
-  setchest:
-  setsync:
-  getholos:
-  clearholos:
-  listchests:
-  clearchests:
-  test:
+authors: [ Heetmeisje ]
+description: NetherKippen, need i say more?
